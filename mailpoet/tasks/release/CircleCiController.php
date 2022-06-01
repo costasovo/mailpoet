@@ -37,7 +37,7 @@ class CircleCiController {
     $circleCiProject = $project === self::PROJECT_MAILPOET ? 'mailpoet' : 'mailpoet-premium';
     $this->zipFilename = $project === self::PROJECT_MAILPOET ? self::FREE_ZIP_FILENAME : self::PREMIUM_ZIP_FILENAME;
     $this->httpClient = new Client([
-      'auth' => [$token, ''],
+      'auth' => [null, $token],
       'headers' => [
         'Accept' => 'application/json',
       ],
@@ -60,6 +60,27 @@ class CircleCiController {
     return $targetPath;
   }
 
+  public function downloadParentBuildFromMain(string $targetPath, string $branch): string {
+    $trunkFetch = trim(shell_exec('git fetch origin trunk:trunk'));
+    $branchFetch = trim(shell_exec("git fetch origin $branch:$branch"));
+    var_dump($trunkFetch);
+    var_dump($branchFetch);
+    $parentCommitCmd = 'LA=$(git log trunk..' . $branch . ' --pretty=format:"%h" | tail -1);git rev-parse $LA^';
+    $parentCommit = trim(shell_exec($parentCommitCmd));
+    var_dump($parentCommit);
+    $response = $this->httpClient->get('https://circleci.com/api/v2/project/gh/mailpoet/mailpoet/pipeline?branch=trunk');
+    var_dump($response->getBody()->getContents());
+    //$jobs = json_decode($response->getBody()->getContents(), true);
+
+   // foreach ($jobs as $job) {
+//      if ($job['workflows']['job_name'] === self::RELEASE_ZIP_JOB_NAME) {
+//        return $job;
+//      }
+    //}
+    return 'a';
+
+  }
+
   private function getLatestZipBuildJob(string $branch) {
     $response = $this->httpClient->get('tree/' . urlencode($branch));
     $jobs = json_decode($response->getBody()->getContents(), true);
@@ -70,6 +91,12 @@ class CircleCiController {
       }
     }
     throw new \Exception('No release ZIP build found');
+  }
+
+  private function getBuildJobForCommit(string $branch, string $commit): string {
+    $response = $this->httpClient->get('tree/' . urlencode($branch));
+    //$jobs = json_decode($response->getBody()->getContents(), true);
+    var_dump($response->getBody()->getContents());
   }
 
   private function checkZipBuildJob(array $job, string $branch) {

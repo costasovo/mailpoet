@@ -932,6 +932,11 @@ class RoboFile extends \Robo\Tasks {
     $this->say(sprintf('Release ZIP file size: %.2F MB', filesize($path) / pow(1024, 2)));
   }
 
+  public function branchZipDelta(string $branch) {
+    $circleciController = $this->createCircleCiController();
+    $circleciController->downloadParentBuildFromMain(self::ZIP_BUILD_PATH, $branch);
+  }
+
   public function releasePublishGithub($version = null) {
     $jiraController = $this->createJiraController();
     $version = $jiraController->getVersion($version);
